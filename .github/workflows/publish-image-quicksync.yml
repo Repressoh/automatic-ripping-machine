@@ -1,4 +1,4 @@
-name: "Publish Docker Image with QuickSync"
+name: "Publish Docker Image"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -21,9 +21,9 @@ on:
 
 env:
   # Use docker.io for Docker Hub if empty
-  REGISTRY: git.albertocaserta.it
+  REGISTRY: ghcr.io
   # use DOCKERHUB_USERNAME as the name maybe different from the github username
-  IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/automatic-ripping-machine
+  IMAGE_NAME: ${{ github.repository_owner }}/automatic-ripping-machine
   TAG: latest
 
 jobs:
@@ -56,14 +56,8 @@ jobs:
         uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
         with:
           registry: ${{ env.REGISTRY }}
-          username: ${{ env.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Login to DockerHub
-        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       # Extract metadata (tags, labels) for Docker
       # https://github.com/docker/metadata-action
@@ -109,7 +103,7 @@ jobs:
       - name: Fetch tags
         run: git fetch --depth=1 origin +refs/tags/*:refs/tags/*
 
-      - name: Check version has corresponding git tag
+      - name: Check version has corrosponding git tag
         id: tagged
         shell: bash
         run: git show-ref --tags --verify --quiet -- "refs/tags/${{ env.VERSION }}" && echo "::set-output name=tagged::0" || echo "::set-output name=tagged::1"
