@@ -1,6 +1,11 @@
 # thanks to https://github.com/automatic-ripping-machine/automatic-ripping-machine/issues/1248#issuecomment-2520524653
 FROM automaticrippingmachine/automatic-ripping-machine:latest 
 LABEL desc="ARM w/ Intel Quick Sync Video Support"
+LABEL org.opencontainers.image.source=https://github.com/repressoh/automatic-ripping-machine
+LABEL org.opencontainers.image.license=MIT
+LABEL org.opencontainers.image.description='Automatic Ripping Machine with QuickSync support for fully automated Blu-ray, DVD and audio disc ripping.'
+
+
 RUN apt update -y &&\
     apt upgrade -y &&\
     apt install -y libmfx1 libmfx-tools libmfx-dev vorbis-tools wget &&\

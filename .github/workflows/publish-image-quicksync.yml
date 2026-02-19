@@ -98,6 +98,8 @@ jobs:
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TAG }}
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
+          provenance: false
+          sbom: false
           labels: |
             ${{ steps.meta.outputs.labels }}
             org.opencontainers.image.version=${{ env.VERSION }}
