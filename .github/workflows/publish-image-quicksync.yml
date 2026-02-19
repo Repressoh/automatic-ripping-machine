@@ -39,6 +39,9 @@ jobs:
         id: branch-name
         uses: tj-actions/branch-names@v9
 
+      - name: Lowercase image name
+        run: echo "IMAGE_NAME=$(echo '${{ env.IMAGE_NAME }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
       - name: Set tag for non-default branch
         if: steps.branch-name.outputs.is_default == 'false' && steps.branch-name.outputs.default_branch != ''
         run: |
