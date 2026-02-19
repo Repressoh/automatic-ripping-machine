@@ -93,8 +93,8 @@ jobs:
           platforms: linux/amd64
           file: Dockerfile-quicksync
           tags: |
-            ${{ env.IMAGE_NAME }}:${{ env.TAG }}
-            ${{ env.IMAGE_NAME }}:${{ env.VERSION }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TAG }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
           labels: |
             ${{ steps.meta.outputs.labels }}
             org.opencontainers.image.version=${{ env.VERSION }}
