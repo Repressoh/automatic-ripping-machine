@@ -11,6 +11,7 @@ import re
 from logging import Logger
 from pathlib import Path, PurePath
 from math import ceil
+from urllib.parse import urlunsplit
 
 import bcrypt
 import requests
@@ -91,6 +92,18 @@ def bash_notify(cfg, title, body):
         arm_subprocess(["/usr/bin/env", "bash", cfg['BASH_SCRIPT'], title, body])
 
 
+def ui_address(port=None):
+    """
+    The ARM UI address used in notifications: UI_BASE_URL when set, else http://<ip>:<port>.
+    The settings-page test notification uses the same address (#1769).
+    """
+    base = str(cfg.arm_config.get("UI_BASE_URL") or "").strip()
+    if base:
+        return base.rstrip("/")
+    # ARM's own web server listens on plain HTTP; UI_BASE_URL is how a TLS proxy address is given.
+    return urlunsplit(("http", f"{check_ip()}:{port or cfg.arm_config['WEBSERVER_PORT']}", "", "", ""))
+
+
 def notify_entry(job):
     """
     Notify On Entry\n
@@ -103,10 +116,7 @@ def notify_entry(job):
                                  f"{job.disctype} at {datetime.datetime.now()}")
     database_adder(notification)
     if job.disctype in ["dvd", "bluray"]:
-        if cfg.arm_config["UI_BASE_URL"] == "":
-            display_address = (f"http://{check_ip()}:{job.config.WEBSERVER_PORT}")
-        else:
-            display_address = str(cfg.arm_config["UI_BASE_URL"])
+        display_address = ui_address(job.config.WEBSERVER_PORT)
         # Send the notifications
         notify(job, NOTIFY_TITLE,
                f"Found disc: {job.title}. Disc type is {job.disctype}. Main Feature is {job.config.MAINFEATURE}."
@@ -664,6 +674,8 @@ def database_updater(args, job, wait_time=90):
     for i in range(wait_time):  # give up after the users wait period in seconds
         try:
             db.session.commit()
+            logging.debug("successfully written to the database")
+            return True
         except Exception as error:
             if "locked" in str(error):
                 time.sleep(1)
@@ -671,8 +683,8 @@ def database_updater(args, job, wait_time=90):
             else:
                 logging.debug(f"Error: {error}")
                 raise RuntimeError(str(error)) from error
-    logging.debug("successfully written to the database")
-    return True
+    logging.error(f"database is locked after {wait_time}s; update was not committed")
+    return False
 
 
 def database_adder(obj_class):
@@ -687,7 +699,8 @@ def database_adder(obj_class):
             logging.debug(f"Trying to add {type(obj_class).__name__}")
             db.session.add(obj_class)
             db.session.commit()
-            break
+            logging.debug(f"successfully written {type(obj_class).__name__} to the database")
+            return True
         except Exception as error:
             if "locked" in str(error):
                 time.sleep(1)
@@ -695,8 +708,8 @@ def database_adder(obj_class):
             else:
                 logging.error(f"Error: {error}")
                 raise RuntimeError(str(error)) from error
-    logging.debug(f"successfully written {type(obj_class).__name__} to the database")
-    return True
+    logging.error(f"database is locked after 90s; {type(obj_class).__name__} was not added")
+    return False
 
 
 def clean_old_jobs():
@@ -775,8 +788,8 @@ def duplicate_run_check(dev_path):
         logging.info(f"Device {dev_path}: Job ({job.job_id}) status '{job.status}'")
     # check for running jobs by associated drive.
     drive = SystemDrives.query.filter_by(mount=dev_path).first()
-    if not drive.processing:
-        return  # drive is not processing, so we are safe to start another run.
+    if drive is None or not drive.processing:
+        return  # unknown or idle drive is safe to start another run.
     job = drive.job_current
     logging.critical(f'Drive {dev_path} has an active Job ({job.job_id}): {job.status}.')
     # log time
